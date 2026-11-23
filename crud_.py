@@ -107,7 +107,7 @@ def partially_update_employee(
         "employee_details": employees[employee_id]
     }
 
-
+#jagan
 # #DELETE method
 
 @app.delete("/employees/{employee_id}")
@@ -119,7 +119,13 @@ def delete_employee(employee_id:int, employee: Employee):
             detail="Employee not found"
         )
 
+<<<<<<< HEAD
     deleted_employee= employees.pop(employee_id)
     return {
               f" employee deleted successfully: {deleted_employee}"
             }
+=======
+#     employees[employee_id] ={
+        
+#     }
+>>>>>>> f8b9a18960ddf7646441dd6d337666a117ec8fde
