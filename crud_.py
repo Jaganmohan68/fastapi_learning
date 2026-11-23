@@ -110,15 +110,16 @@ def partially_update_employee(
 
 # #DELETE method
 
-# @app.delete("/employees/{employee_id}")
-# def delete_employee(employee_id:int, employee: Employee):
+@app.delete("/employees/{employee_id}")
+def delete_employee(employee_id:int, employee: Employee):
 
-#     if employee_id not in employees:
-#         raise HTTPException(
-#             status_code=404,
-#             detail="Employee not found"
-#         )
+    if employee_id not in employees:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee not found"
+        )
 
-#     employees[employee_id] ={
-        
-#     }
+    deleted_employee= employees.pop(employee_id)
+    return {
+              f" employee deleted successfully: {deleted_employee}"
+            }
