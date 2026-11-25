@@ -13,7 +13,7 @@ app = FastAPI(title="Employee API with PostgreSQL")
 class EmployeeData(BaseModel):
     name: str
     department: str
-    location: str
+    salary: int
 
 
 # Data required to create an employee; the client supplies the ID
@@ -25,7 +25,7 @@ class EmployeeCreate(EmployeeData):
 class EmployeePatch(BaseModel):
     name: str | None = None
     department: str | None = None
-    location: str | None = None
+    salary: int | None = None
 
 
 # Fields the API sends back to the client
@@ -95,7 +95,7 @@ def replace_employee(
 
     employee.name = employee_data.name
     employee.department = employee_data.department
-    employee.location = employee_data.location
+    employee.salary = employee_data.salary
 
     db.commit()
     db.refresh(employee)

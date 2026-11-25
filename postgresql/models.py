@@ -8,4 +8,4 @@ class EmployeeDB(Base):
     employee_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     department = Column(String, nullable=False)
-    location = Column(String, nullable=False)
+    salary = Column(Integer, nullable=False)
