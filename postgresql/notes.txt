@@ -1,0 +1,1 @@
+Databases → fastapi_employees → Schemas → public → Tables in pgAdmin
