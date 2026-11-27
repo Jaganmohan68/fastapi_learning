@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException, status
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
@@ -21,6 +21,16 @@ NonEmptyText = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1),
 ]
+PhoneNumber = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=7,
+        max_length=20,
+        pattern=r"^\+?[0-9][0-9 ()-]*[0-9]$",
+    ),
+]
+WorkType = Literal["remote", "work_from_office"]
 
 
 class EmployeeEmail(BaseModel):
@@ -45,6 +55,8 @@ class EmployeeData(EmployeeEmail):
     department: NonEmptyText
     salary: int = Field(ge=0)
     location: NonEmptyText
+    phone_number: PhoneNumber
+    work_type: WorkType
     emp_email: EmailStr
 
 
@@ -59,6 +71,8 @@ class EmployeePatch(EmployeeEmail):
     department: NonEmptyText | None = None
     salary: int | None = Field(default=None, ge=0)
     location: NonEmptyText | None = None
+    phone_number: PhoneNumber | None = None
+    work_type: WorkType | None = None
 
 
 # Fields the API sends back to the client
@@ -69,6 +83,8 @@ class EmployeeResponse(BaseModel):
     salary: int
     location: str | None = None
     emp_email: str | None = None
+    phone_number: str | None = None
+    work_type: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -158,6 +174,8 @@ def replace_employee(
     employee.department = employee_data.department
     employee.salary = employee_data.salary
     employee.location = employee_data.location
+    employee.phone_number = employee_data.phone_number
+    employee.work_type = employee_data.work_type
     employee.emp_email = str(employee_data.emp_email)
 
     db.commit()
