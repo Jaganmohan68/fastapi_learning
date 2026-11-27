@@ -9,3 +9,5 @@ class EmployeeDB(Base):
     name = Column(String, nullable=False)
     department = Column(String, nullable=False)
     salary = Column(Integer, nullable=False)
+    location = Column(String, nullable=True)
+    emp_email = Column(String(254), nullable=True, unique=True, index=True)

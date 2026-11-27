@@ -1,1 +1,4 @@
 Databases → fastapi_employees → Schemas → public → Tables in pgAdmin
+
+
+# to run the application:- uvicorn postgresql.app:app --reload

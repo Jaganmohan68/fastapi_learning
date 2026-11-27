@@ -1,5 +1,14 @@
 from fastapi import Depends, FastAPI, HTTPException, status
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -8,29 +17,58 @@ from .models import EmployeeDB
 
 app = FastAPI(title="Employee API with PostgreSQL")
 
+NonEmptyText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
+
+
+class EmployeeEmail(BaseModel):
+    emp_email: EmailStr | None = None
+
+    @field_validator("emp_email")
+    @classmethod
+    def validate_company_email(cls, value: EmailStr | None) -> EmailStr | None:
+        if value is None:
+            return value
+
+        domain = str(value).rsplit("@", 1)[1].casefold()
+        if domain != "mohan.com":
+            raise ValueError("Email must use the @mohan.com company domain")
+
+        return value
+
 
 # Data the client must provide when creating or fully replacing an employee
-class EmployeeData(BaseModel):
-    name: str
-    department: str
-    salary: int
+class EmployeeData(EmployeeEmail):
+    name: NonEmptyText
+    department: NonEmptyText
+    salary: int = Field(ge=0)
+    location: NonEmptyText
+    emp_email: EmailStr
 
 
 # Data required to create an employee; the client supplies the ID
 class EmployeeCreate(EmployeeData):
-    employee_id: int
+    employee_id: int = Field(gt=0)
 
 
 # Data accepted when partially updating an employee
-class EmployeePatch(BaseModel):
-    name: str | None = None
-    department: str | None = None
-    salary: int | None = None
+class EmployeePatch(EmployeeEmail):
+    name: NonEmptyText | None = None
+    department: NonEmptyText | None = None
+    salary: int | None = Field(default=None, ge=0)
+    location: NonEmptyText | None = None
 
 
 # Fields the API sends back to the client
-class EmployeeResponse(EmployeeData):
+class EmployeeResponse(BaseModel):
     employee_id: int
+    name: str
+    department: str
+    salary: int
+    location: str | None = None
+    emp_email: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -70,7 +108,18 @@ def create_employee(employee_data: EmployeeCreate, db: Session = Depends(get_db)
             detail="Employee ID already exists",
         )
 
-    employee = EmployeeDB(**employee_data.model_dump())
+    existing_email = db.scalar(
+        select(EmployeeDB).where(EmployeeDB.emp_email == str(employee_data.emp_email))
+    )
+    if existing_email is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already assigned to an employee",
+        )
+
+    employee_values = employee_data.model_dump()
+    employee_values["emp_email"] = str(employee_data.emp_email)
+    employee = EmployeeDB(**employee_values)
     db.add(employee)
     db.commit()
     db.refresh(employee)
@@ -93,9 +142,23 @@ def replace_employee(
             detail="Employee not found",
         )
 
+    existing_email = db.scalar(
+        select(EmployeeDB).where(
+            EmployeeDB.emp_email == str(employee_data.emp_email),
+            EmployeeDB.employee_id != employee_id,
+        )
+    )
+    if existing_email is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already assigned to another employee",
+        )
+
     employee.name = employee_data.name
     employee.department = employee_data.department
     employee.salary = employee_data.salary
+    employee.location = employee_data.location
+    employee.emp_email = str(employee_data.emp_email)
 
     db.commit()
     db.refresh(employee)
@@ -125,6 +188,20 @@ def patch_employee(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Provide at least one field to update",
         )
+
+    if "emp_email" in changes:
+        existing_email = db.scalar(
+            select(EmployeeDB).where(
+                EmployeeDB.emp_email == str(changes["emp_email"]),
+                EmployeeDB.employee_id != employee_id,
+            )
+        )
+        if existing_email is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email is already assigned to another employee",
+            )
+        changes["emp_email"] = str(changes["emp_email"])
 
     for field, value in changes.items():
         setattr(employee, field, value)
